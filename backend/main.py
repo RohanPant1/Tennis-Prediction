@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import xgboost as xgb
 import pandas as pd
-# Import your existing logic from your project files
+import joblib
 from predict_stats import predict_matchup
 
 app = FastAPI()
+
+best_model = joblib.load('tennis_prediction_pipeline.joblib')
 
 # Enable CORS for your React frontend (usually port 5173)
 app.add_middleware(
@@ -16,10 +18,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Load model once at startup
-model = xgb.Booster()
-model.load_model("tennis_model.json")
 df_stats = pd.read_csv("atp_matches_feature_add.csv")
 
 class MatchRequest(BaseModel):
@@ -34,21 +32,20 @@ class MatchRequest(BaseModel):
 
 @app.post("/predict")
 async def predict(match: MatchRequest):
-    # 1. Convert request to model features using your existing code
-    features = get_matchup_features(
+    # Call your notebook's logic
+    result = predict_matchup(
         match.p1, match.p2, match.target_date, 
         match.surface, match.draw_size, match.best_of, 
-        match.tourney_level, match.round_idx, df_stats
+        match.tourney_level, match.round_idx, df_stats, best_model
     )
     
-    # 2. Run Inference
-    dmat = xgb.DMatrix(features)
-    prob = model.predict(dmat)[0] # Assuming binary classification
+    if result is None:
+        return {"error": f"Could not build features for {match.p1} or {match.p2}."}
     
-    winner = match.p1 if prob > 0.5 else match.p2
-    confidence = float(prob if prob > 0.5 else 1 - prob)
-
+    # FIX: Convert NumPy float32 to standard Python floats so they can be JSON-serialized.
+    # We also exclude the 'features' DataFrame because it's too complex for a basic JSON response.
     return {
-        "winner": winner,
-        "probability": round(confidence * 100, 2)
+        "winner": result['winner'],
+        "p1_prob": float(result['p1_prob']), 
+        "p2_prob": float(result['p2_prob'])
     }

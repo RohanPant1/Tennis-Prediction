@@ -3,9 +3,6 @@ import pandas as pd
 import numpy as np
 import math
 from datetime import timedelta
-import joblib
-
-best_model = joblib.load('tennis_prediction_pipeline.joblib')
 
 # %%
 # --- Parameters & Helpers from your logic ---
@@ -219,18 +216,5 @@ def predict_matchup(p1, p2, target_date, surface, draw_size, best_of, tourney_le
         'features': X_input
     }
 
-df_add = pd.read_csv("atp_matches_feature_add.csv")
-result = predict_matchup(
-    p1="Jannik Sinner", 
-    p2="Casper Ruud", 
-    target_date="2025-09-14", 
-    surface="Clay", 
-    draw_size=128, 
-    best_of=5, 
-    tourney_level="G", 
-    round_idx=6, 
-    df_stats=df_add, 
-    model=best_model
-) 
 
 
