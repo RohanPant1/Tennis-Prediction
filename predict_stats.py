@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import math
 from datetime import timedelta
+import joblib
+
+best_model = joblib.load('tennis_prediction_pipeline.joblib')
 
 # %%
 # --- Parameters & Helpers from your logic ---
@@ -180,6 +183,54 @@ def get_matchup_features(p1, p2, target_date, surface, draw_size, best_of, tourn
     return pd.DataFrame([feat])[ordered_columns]
 
 # %%
+def predict_matchup(p1, p2, target_date, surface, draw_size, best_of, tourney_level, round_idx, df_stats, model):
+    """
+    Generates features for a specific matchup and uses the trained model to predict a winner.
+    """
+    # 1. Generate the features using the function we built
+    X_input = get_matchup_features(
+        p1, p2, target_date, surface, draw_size, best_of, tourney_level, round_idx, df_stats
+    )
+    
+    # Convert booleans to ints (as done in step 2 of your model.ipynb)
+    bool_cols = X_input.select_dtypes(include=['bool']).columns
+    X_input[bool_cols] = X_input[bool_cols].astype(int)
 
+    # 3. Predict Probabilities
+    # prob[0] is the probability of Target=0 (Player 2 wins)
+    # prob[1] is the probability of Target=1 (Player 1 wins)
+    prob = model.predict_proba(X_input)[0]
+    prediction = model.predict(X_input)[0]
+
+    winner = p1 if prediction == 1 else p2
+    confidence = prob[1] if prediction == 1 else prob[0]
+
+    print(f"--- Prediction: {p1} vs {p2} ---")
+    print(f"Surface: {surface} | Date: {target_date}")
+    print(f"Predicted Winner: {winner}")
+    print(f"Confidence: {confidence:.2%}")
+    print(f"Win Probability for {p1}: {prob[1]:.2%}")
+    print(f"Win Probability for {p2}: {prob[0]:.2%}")
+    
+    return {
+        'winner': winner,
+        'p1_prob': prob[1],
+        'p2_prob': prob[0],
+        'features': X_input
+    }
+
+df_add = pd.read_csv("atp_matches_feature_add.csv")
+result = predict_matchup(
+    p1="Jannik Sinner", 
+    p2="Casper Ruud", 
+    target_date="2025-09-14", 
+    surface="Clay", 
+    draw_size=128, 
+    best_of=5, 
+    tourney_level="G", 
+    round_idx=6, 
+    df_stats=df_add, 
+    model=best_model
+) 
 
 
