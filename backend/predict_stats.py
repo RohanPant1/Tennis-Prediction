@@ -158,7 +158,7 @@ def get_matchup_features(p1, p2, target_date, surface, draw_size, best_of, tourn
     feat['surface=HARD'] = (surf_up == 'HARD')
 
     tl_up = str(tourney_level).upper()
-    for level in ['A', 'D', 'F', 'G', 'M', 'O']:
+    for level in ['A', 'C', 'D', 'F', 'G', 'M', 'O']:
         feat[f'tourney_level={level}'] = (tl_up == level)
 
     for r in range(8):
@@ -172,9 +172,9 @@ def get_matchup_features(p1, p2, target_date, surface, draw_size, best_of, tourn
         'rel_rank_points', 'rel_age', 'rel_ht', 'rel_ace_rate_52w', 'rel_df_rate_52w', 
         'rel_1stIn_pct_52w', 'rel_1stWon_pct_52w', 'rel_2ndWon_pct_52w', 'rel_bp_saved_pct_52w', 
         'rel_bp_converted_pct_52w', 'rel_career_matches', 'rel_surface_matches', 'rel_h2h_win_diff', 
-        'h2h_matches', 'rel_return_elo_x_clay', 'rel_serve_elo_x_grass', 'surface=CLAY', 
-        'surface=GRASS', 'surface=HARD', 'tourney_level=A', 'tourney_level=D', 'tourney_level=F', 
-        'tourney_level=G', 'tourney_level=M', 'tourney_level=O', 'round=0', 'round=1', 
+        'h2h_matches', 'rel_return_elo_x_clay', 'rel_serve_elo_x_grass', 'surface=CLAY',
+        'surface=GRASS', 'surface=HARD', 'tourney_level=A', 'tourney_level=C', 'tourney_level=D', 'tourney_level=F',
+        'tourney_level=G', 'tourney_level=M', 'tourney_level=O', 'round=0', 'round=1',
         'round=2', 'round=3', 'round=4', 'round=5', 'round=6', 'round=7'
     ]
     return pd.DataFrame([feat])[ordered_columns]
