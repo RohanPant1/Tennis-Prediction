@@ -2,25 +2,17 @@
 import pandas as pd
 import math
 from collections import defaultdict
-import matplotlib.pyplot as plt
 from datetime import timedelta
-import numpy as np
 
 df = pd.read_csv("atp_matches_data_cleaned.csv")
-print(len(df))
-print(df["score"].isna())
-print(type(df.iloc[0]["tourney_date"]))
 
 
 # %%
-print(df["score"].isna().sum())
-df["retired"] = df["score"].str.contains("RET|W|DEF", regex=True).astype(int)
 df["tourney_date"] = pd.to_datetime(
     df["tourney_date"],
     format="%Y%m%d",
     errors="coerce"
 )
-print(df["tourney_date"])
 
 # %%
 # ---------------------------
@@ -334,11 +326,13 @@ def compute_rates(rows, k=200):
 # ---------------------------
 # Main loop
 # ---------------------------
+ROLE_TO_NAME_COL = {"w": "winner_name", "l": "loser_name"}
+
 for _, r in df.iterrows():
     date = r["tourney_date"]
 
     for side in ["w", "l"]:
-        pid = r[f"{side}inner_name"] if side == "w" else r["loser_name"]
+        pid = r[ROLE_TO_NAME_COL[side]]
 
         # filter 52-week window
         rows = [
@@ -352,9 +346,13 @@ for _, r in df.iterrows():
             out[f"{side}_{c}_52w"].append(stats[c])
 
     # ---------------------------
-    # Update history AFTER feature extraction
+    # Update history AFTER feature extraction.
+    # Both sides must be keyed by *name* to match the lookup above - keying the
+    # winner by winner_id here previously meant a player's own wins were stored
+    # under a different key than their future lookups used, so their rolling
+    # stats only ever reflected their losses.
     # ---------------------------
-    history[r["winner_id"]].append({
+    history[r["winner_name"]].append({
         "date": date,
         "ace": r["w_ace"],
         "df": r["w_df"],
@@ -394,328 +392,6 @@ df[[
   "w_1stIn_pct_52w", "w_1stWon_pct_52w", "w_2ndWon_pct_52w",
   "w_bp_saved_pct_52w", "w_bp_converted_pct_52w"
 ]].describe()
-
-
-# %%
-df["match_date"] = pd.to_datetime(df["match_date"].astype(str), format="%Y%m%d")
-
-# Sort for deterministic history (important)
-df = df.sort_values(["match_date", "tourney_id", "match_num"]).reset_index(drop=True)
-
-# Create a stable match id
-df["match_id"] = np.arange(len(df))
-
-# ---- Build long (player-appearance) table internally
-# We attribute "retired" to the LOSER as the injury signal (RET/W-O/DEF usually corresponds to loser withdrawing).
-base_cols = ["match_id", "match_date", "tourney_id", "best_of", "minutes", "retired", "winner_name", "loser_name"]
-
-long_w = df[base_cols].copy()
-long_w["player_id"] = df["winner_name"]
-long_w["opponent_id"] = df["loser_name"]
-long_w["role"] = "w"
-long_w["player_incomplete"] = 0
-
-long_l = df[base_cols].copy()
-long_l["player_id"] = df["loser_name"]
-long_l["opponent_id"] = df["winner_name"]
-long_l["role"] = "l"
-long_l["player_incomplete"] = df["retired"].astype(int)
-
-long = pd.concat([long_w, long_l], ignore_index=True)
-long = long.sort_values(["player_id", "match_date", "match_id", "role"]).reset_index(drop=True)
-
-# %%
-# # ---- Fatigue computation per player (single pass per player; leakage-safe)
-# def add_fatigue_per_player(g: pd.DataFrame) -> pd.DataFrame:
-#     g = g.sort_values(["match_date", "match_id"]).copy()
-#     ln2 = math.log(2)
-
-#     # Global workload states (decayed minutes)
-#     last_date = None
-#     s7 = 0.0
-#     s28 = 0.0
-
-#     # Tournament grind states (reset when tourney_id changes)
-#     last_tourney = None
-#     tour_minutes = 0.0
-#     tour_matches = 0
-#     tour_last_date = None
-#     tour_bo5_minutes = 0.0
-
-#     # Injury signal: last date player withdrew/retired (attributed to loser rows)
-#     last_injury_date = None
-
-#     RPLI, LSI, TGI, IRF, TS = [], [], [], [], []
-
-#     for _, row in g.iterrows():
-#         t = row["match_date"]
-
-#         # --- Decay global sums based on days since last match
-#         if last_date is None:
-#             rest_days = 30
-#         else:
-#             delta = max((t - last_date).days, 0)
-#             rest_days = delta
-#             s7 *= math.exp(-ln2 * delta / 7.0)
-#             s28 *= math.exp(-ln2 * delta / 28.0)
-
-#         dMin7, dMin28 = s7, s28
-
-#         # 1) RPLI
-#         rpli = dMin7 + 0.5 * dMin28 - 0.75 * rest_days
-
-#         # 2) LSI
-#         acwr = dMin7 / (dMin28 + 1e-6)
-#         spike = dMin7 - dMin28
-#         lsi = acwr + 0.5 * spike
-
-#         # --- Tournament grind states (reset on new tournament)
-#         if last_tourney is None or row["tourney_id"] != last_tourney:
-#             tour_minutes = 0.0
-#             tour_matches = 0
-#             tour_last_date = None
-#             tour_bo5_minutes = 0.0
-
-#         if tour_last_date is None:
-#             tour_rest = 30
-#         else:
-#             tour_rest = max((t - tour_last_date).days, 0)
-
-#         # 3) TGI (with BO5 grind add-on)
-#         tgi = tour_minutes + 0.5 * tour_matches - 0.5 * tour_rest
-#         if int(row["best_of"]) == 5:
-#             tgi += tour_bo5_minutes
-
-#         # 4) IRF (injury risk flag)
-#         if last_injury_date is None:
-#             irf = 0
-#         else:
-#             irf = int((t - last_injury_date).days <= 28)
-
-#         # 5) TravelStress proxy (tourney switch + short rest)
-#         travel_stress = int(
-#             (last_tourney is not None)
-#             and (row["tourney_id"] != last_tourney)
-#             and (rest_days <= 2)
-#         )
-
-#         RPLI.append(rpli)
-#         LSI.append(lsi)
-#         TGI.append(tgi)
-#         IRF.append(irf)
-#         TS.append(travel_stress)
-
-#         # --- Post-match update: add this match minutes into future state
-#         mins = row["minutes"]
-#         if pd.isna(mins):
-#             mins = 0.0
-
-#         s7 += float(mins)
-#         s28 += float(mins)
-#         last_date = t
-
-#         last_tourney = row["tourney_id"]
-#         tour_minutes += float(mins)
-#         tour_matches += 1
-#         tour_last_date = t
-#         if int(row["best_of"]) == 5:
-#             tour_bo5_minutes += float(mins)
-
-#         # Injury update if THIS player withdrew/retired (we attribute to loser side)
-#         if int(row.get("player_incomplete", 0)) == 1:
-#             last_injury_date = t
-
-#     g["RPLI"] = RPLI
-#     g["LSI"] = LSI
-#     g["TGI"] = TGI
-#     g["IRF"] = IRF
-#     g["TravelStress"] = TS
-#     return g
-
-
-
-# def add_fatigue_and_layoff_features(g: pd.DataFrame) -> pd.DataFrame:
-#     g = g.sort_values(["match_date", "match_id"]).copy()
-#     ln2 = math.log(2)
-
-#     # State Variables
-#     last_date, s7, s28 = None, 0.0, 0.0
-#     last_tourney, tour_minutes, tour_matches = None, 0.0, 0
-#     last_injury_date = None
-    
-#     # Layoff tracking
-#     rust_index = 0.0
-
-#     RPLI_list, LSI_list, TGI_list, IRF_list, RUST_list = [], [], [], [], []
-
-#     for _, row in g.iterrows():
-#         t = pd.to_datetime(row["match_date"])
-        
-#         # 1. GAPS AND LAYOFFS
-#         if last_date is None:
-#             rest_days = 30
-#         else:
-#             delta = (t - last_date).days
-#             rest_days = max(delta, 0)
-            
-#             # --- HEURISTIC: Identify an Injury Layoff (> 60 days)
-#             if rest_days > 60:
-#                 rust_index = 1.0 # Maximum rust upon return
-#                 s7, s28 = 0.0, 0.0 # Clear workloads
-            
-#             # --- Seasonal Reset (> 21 days but < 60 days)
-#             elif rest_days > 21:
-#                 s7, s28 = 0.0, 0.0
-#                 # We don't trigger Rust for a standard 3-week off-season
-                
-#         # 2. DECAY WORKLOADS
-#         s7 *= math.exp(-ln2 * rest_days / 7.0)
-#         s28 *= math.exp(-ln2 * rest_days / 28.0)
-
-#         # 3. COMPUTE FEATURES (Before current match)
-        
-#         # RPLI: Load vs Rest
-#         rpli = s7 + (0.5 * s28) - rest_days
-
-#         # LSI: ACWR stabilized with 100min "base"
-#         # High LSI + High Rust = Very high risk of second injury or upset
-#         acwr = s7 / (s28 + 100)
-#         lsi = (acwr * 100) + (s7 - s28)
-#         lsi = np.clip(lsi, -100, 500)
-
-#         # TGI: Current Tournament Grind
-#         if last_tourney is None or row["tourney_id"] != last_tourney:
-#             tour_minutes, tour_matches = 0.0, 0
-#         tgi = tour_minutes + (tour_matches * 10)
-
-#         # IRF: Did they retire in the last 28 days?
-#         irf = int(last_injury_date is not None and (t - last_injury_date).days <= 28)
-
-#         # 4. APPEND FEATURES
-#         RPLI_list.append(rpli)
-#         LSI_list.append(lsi)
-#         TGI_list.append(tgi)
-#         IRF_list.append(irf)
-#         RUST_list.append(rust_index)
-
-#         # 5. POST-MATCH UPDATE
-#         mins = row["minutes"]
-#         score = str(row["score"])
-#         is_retirement = "RET" in score or "W/O" in score
-
-#         # Impute minutes (No surface multipliers used here)
-#         if pd.isna(mins) or mins < 20 or is_retirement:
-#             mins = 110 if int(row["best_of"]) == 3 else 170
-
-#         s7 += float(mins)
-#         s28 += float(mins)
-#         tour_minutes += float(mins)
-#         tour_matches += 1
-#         last_date = t
-#         last_tourney = row["tourney_id"]
-        
-#         # Decrease rust for every match successfully completed
-#         if rust_index > 0:
-#             rust_index = max(0, rust_index - 0.2) # Fully "un-rusted" after 5 matches
-            
-#         if is_retirement:
-#             last_injury_date = t
-#             # Optional: A retirement can reset rust if they go back to the sidelines
-#             # rust_index = 0.5 
-
-#     g["RPLI"], g["LSI"], g["TGI"], g["IRF"], g["RustIndex"] = RPLI_list, LSI_list, TGI_list, IRF_list, RUST_list
-#     return g
-
-
-# %%
-# fat_long = long.groupby("player_id", group_keys=False).apply(add_fatigue_per_player)
-
-# # ---- Merge back to match-level (one row per match)
-# w_feats = fat_long[fat_long["role"] == "w"][["match_id", "RPLI", "LSI", "TGI", "IRF", "TravelStress"]].rename(
-#     columns={"RPLI": "w_RPLI", "LSI": "w_LSI", "TGI": "w_TGI", "IRF": "w_IRF", "TravelStress": "w_TravelStress"}
-# )
-# l_feats = fat_long[fat_long["role"] == "l"][["match_id", "RPLI", "LSI", "TGI", "IRF", "TravelStress"]].rename(
-#     columns={"RPLI": "l_RPLI", "LSI": "l_LSI", "TGI": "l_TGI", "IRF": "l_IRF", "TravelStress": "l_TravelStress"}
-# )
-
-# df = df.merge(w_feats, on="match_id", how="left").merge(l_feats, on="match_id", how="left")
-
-# %%
-# # --- 1) Required columns present
-# req = [
-#     "match_date","tourney_id","match_num","winner_name","loser_name","minutes","retired","best_of",
-#     "w_RPLI","w_LSI","w_TGI","w_IRF","w_TravelStress",
-#     "l_RPLI","l_LSI","l_TGI","l_IRF","l_TravelStress",
-# ]
-# missing = [c for c in req if c not in df.columns]
-# print("Missing columns:", missing)
-
-# # --- 2) Parse date + sort (ensures diagnostics consistent)
-# df["match_date"] = pd.to_datetime(df["match_date"])
-# df = df.sort_values(["match_date","tourney_id","match_num"]).reset_index(drop=True)
-
-# # --- 3) Check NaN / inf in fatigue features
-# fat_cols = [
-#     "w_RPLI","w_LSI","w_TGI","w_IRF","w_TravelStress",
-#     "l_RPLI","l_LSI","l_TGI","l_IRF","l_TravelStress",
-# ]
-
-# nan_counts = df[fat_cols].isna().sum().sort_values(ascending=False)
-# inf_counts = np.isinf(df[fat_cols].to_numpy()).sum(axis=0)
-# inf_counts = pd.Series(inf_counts, index=fat_cols).sort_values(ascending=False)
-
-# print("\nNaN counts (fatigue cols):")
-# print(nan_counts[nan_counts > 0].head(20) if (nan_counts > 0).any() else "None")
-
-# print("\nInf counts (fatigue cols):")
-# print(inf_counts[inf_counts > 0].head(20) if (inf_counts > 0).any() else "None")
-
-# # --- 4) Basic ranges / distribution sanity
-# print("\nFatigue feature summary (winner):")
-# print(df[["w_RPLI","w_LSI","w_TGI","w_IRF","w_TravelStress"]].describe(percentiles=[.01,.05,.5,.95,.99]))
-
-# print("\nFatigue feature summary (loser):")
-# print(df[["l_RPLI","l_LSI","l_TGI","l_IRF","l_TravelStress"]].describe(percentiles=[.01,.05,.5,.95,.99]))
-
-# # --- 5) Sanity: first-ever match for a player should have fatigue ~0
-# # We'll check the earliest appearance per player for both roles.
-# first_w = df.sort_values("match_date").groupby("winner_name").head(1)
-# first_l = df.sort_values("match_date").groupby("loser_name").head(1)
-
-# print("\nEarliest winner appearances: % with |w_RPLI|<=1e-9:", (first_w["w_RPLI"].abs() <= 1e-9).mean())
-# print("Earliest loser appearances:  % with |l_RPLI|<=1e-9:", (first_l["l_RPLI"].abs() <= 1e-9).mean())
-
-# # --- 6) TravelStress should be rare-ish and binary
-# for col in ["w_TravelStress","l_TravelStress","w_IRF","l_IRF"]:
-#     vals = df[col].value_counts(dropna=False).sort_index()
-#     print(f"\n{col} value counts:\n{vals}")
-
-# # --- 7) Quick “leakage smell test”:
-# # Fatigue should correlate positively with recent minutes played, not with future minutes.
-# # (We do a weak check: higher fatigue today tends to have higher minutes in last 28 days proxy;
-# # we don't have explicit past-28-minutes here, so we just check that RPLI correlates with minutes
-# # *in the match itself* only weakly/moderately, not extremely.)
-# print("\nCorr(w_RPLI, minutes):", df["w_RPLI"].corr(df["minutes"]))
-# print("Corr(l_RPLI, minutes):", df["l_RPLI"].corr(df["minutes"]))
-
-# # --- 8) Spot-check one player timeline
-# def inspect_player(pid, n=55):
-#     m = df[(df["winner_name"] == pid) | (df["loser_name"] == pid)].copy()
-#     m = m.sort_values(["match_date","tourney_id","match_num"])
-#     # Pull role-specific fatigue
-#     m["role"] = np.where(m["winner_name"] == pid, "W", "L")
-#     m["RPLI"] = np.where(m["winner_name"] == pid, m["w_RPLI"], m["l_RPLI"])
-#     m["TGI"]  = np.where(m["winner_name"] == pid, m["w_TGI"],  m["l_TGI"])
-#     m["IRF"]  = np.where(m["winner_name"] == pid, m["w_IRF"],  m["l_IRF"])
-#     m["TS"]   = np.where(m["winner_name"] == pid, m["w_TravelStress"], m["l_TravelStress"])
-#     cols = ["match_date","tourney_id","round","minutes","retired","best_of","role","RPLI","TGI","IRF","TS"]
-#     return m[cols].head(n)
-
-# # Pick a player with lots of matches (top 20 by appearances) and inspect
-# counts = pd.concat([df["winner_name"], df["loser_name"]]).value_counts()
-# pid = counts.index[0]
-# print("\nInspecting most frequent player_id:", pid, "matches:", counts.iloc[0])
-# print(inspect_player(pid, n=55).to_string(index=False))
 
 
 # %%
@@ -821,8 +497,3 @@ df["rel_return_elo_x_clay"] = df["rel_return_elo_pre"] * (df["surface"] == "Clay
 # %%
 df.to_csv('atp_matches_feature_add.csv', index=False, header=True)
 df
-
-# %%
-
-
-
