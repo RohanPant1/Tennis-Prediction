@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+venv/
+.venv/
+env/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# CatBoost training artifacts
+catboost_info/
+
+# Environment / secrets
+.env
+.env.*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
