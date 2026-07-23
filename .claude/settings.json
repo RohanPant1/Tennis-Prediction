@@ -60,7 +60,11 @@
       "Bash(curl -sf http://localhost:8000/docs)",
       "Bash(curl -sf http://localhost:5173)",
       "Bash(curl -s http://localhost:8000/players)",
-      "Read(//c/Users/rohan/.claude/projects/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/tool-results/**)"
+      "Read(//c/Users/rohan/.claude/projects/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/tool-results/**)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)",
+      "Bash(git check-ignore *)",
+      "Bash(git ls-files *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\rohan\\.claude\\plans"

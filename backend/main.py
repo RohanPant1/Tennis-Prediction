@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,10 +11,13 @@ app = FastAPI()
 
 best_model = joblib.load('tennis_prediction_pipeline.joblib')
 
-# Enable CORS for your React frontend (usually port 5173)
+# Origins are comma-separated in the ALLOWED_ORIGINS env var (set this to your
+# deployed frontend URL, e.g. https://your-app.vercel.app). Falls back to the
+# local Vite dev server so `npm run dev` keeps working untouched.
+_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[origin.strip() for origin in _allowed_origins.split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
