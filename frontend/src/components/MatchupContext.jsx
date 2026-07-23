@@ -49,7 +49,7 @@ export default function MatchupContext({ context, p1Name, p2Name, surface }) {
   if (!context) return null
 
   return (
-    <div className="mt-6 border-t border-slate-800 pt-5">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl">
       <p className="text-sm font-semibold text-slate-300">Matchup context</p>
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row">

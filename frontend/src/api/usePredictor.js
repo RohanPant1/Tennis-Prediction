@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import client from './client'
 
 const COLD_START_DELAY_MS = 4000
@@ -72,6 +72,14 @@ export default function usePredictor() {
       setIsSlow(false)
     }
   }
+
+  const hasAutoRun = useRef(false)
+  useEffect(() => {
+    if (hasAutoRun.current) return
+    hasAutoRun.current = true
+    predict()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
     p1, setP1, p2, setP2, swapPlayers, sameSelected,

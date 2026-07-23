@@ -54,7 +54,7 @@ export default function PredictorCard({ predictor, players }) {
       )}
 
       {/* Present / Past toggle — always visible, the one exception to "advanced options" */}
-      <div className="mt-5">
+      <div className="mt-6">
         <span className="text-sm font-medium text-slate-300">Match date</span>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1">
@@ -83,10 +83,16 @@ export default function PredictorCard({ predictor, players }) {
             />
           )}
         </div>
+        {predictor.dateMode === 'present' && (
+          <p className="mt-2 text-xs text-slate-500">
+            "Present" uses each player's stats as of Roland Garros 2026, the most recent data
+            the model has.
+          </p>
+        )}
       </div>
 
       {/* Advanced options — collapsed by default */}
-      <div className="mt-5 border-t border-slate-800 pt-4">
+      <div className="mt-6 border-t border-slate-800 pt-4">
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
@@ -96,7 +102,7 @@ export default function PredictorCard({ predictor, players }) {
         </button>
 
         {showAdvanced && (
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
               <label htmlFor="adv-surface" className="text-sm font-medium text-slate-300">Surface</label>
               <select

@@ -39,7 +39,31 @@
       "Bash(python3 -c ' *)",
       "Bash(curl -s -X POST http://localhost:8001/predict -H \"Content-Type: application/json\" -d '{\"p1\":\"Carlos Alcaraz\",\"p2\":\"Jannik Sinner\",\"target_date\":\"2026-07-22\",\"surface\":\"Clay\",\"draw_size\":32,\"best_of\":3,\"tourney_level\":\"A\",\"round_idx\":7}')",
       "Bash(node verify_final.mjs)",
-      "Bash(grep -v \"^---\\\\|^Surface\\\\|^Predicted\\\\|^Confidence\\\\|^Win Prob\\\\|^$\")"
+      "Bash(grep -v \"^---\\\\|^Surface\\\\|^Predicted\\\\|^Confidence\\\\|^Win Prob\\\\|^$\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\rohan\\\\.claude\\\\plans\" 2>/dev/null; echo ok)",
+      "Bash(chromium-cli --session tennis)",
+      "Bash(npx --version)",
+      "Bash(node -e \"require\\('playwright'\\); console.log\\('node playwright available'\\)\")",
+      "Bash(ls -la \"/c/Users/rohan/AppData/Local/Temp/claude/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/481eb519-70e4-4cd0-a347-b0e567133229/scratchpad/\"*.png 2>&1)",
+      "Read(//c/Users/rohan/AppData/Local/Temp/claude/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/481eb519-70e4-4cd0-a347-b0e567133229/scratchpad/**)",
+      "Bash(ls -la \"/c/Users/rohan/AppData/Local/Temp/claude/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/481eb519-70e4-4cd0-a347-b0e567133229/scratchpad/\"*.png)",
+      "Read(//c/c/Users/rohan/AppData/Local/Temp/claude/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/481eb519-70e4-4cd0-a347-b0e567133229/scratchpad/**)",
+      "Bash(powershell -Command \"Test-Path 'C:\\\\Users\\\\rohan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction\\\\481eb519-70e4-4cd0-a347-b0e567133229\\\\scratchpad\\\\desktop_predict_full.png'\")",
+      "Bash(ls -la \"/c/Users/rohan/AppData/Local/Temp/claude/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/481eb519-70e4-4cd0-a347-b0e567133229/scratchpad/\")",
+      "Read(//c/Users/rohan/OneDrive - Monash University/Coding/Tennis Prediction/**)",
+      "Bash(python3 -)",
+      "Bash(lsof -ti:5173 -sTCP:LISTEN)",
+      "Bash(xargs -r kill)",
+      "Bash(lsof -ti:8000 -sTCP:LISTEN)",
+      "Bash(cd \"../frontend\" && npm run lint 2>&1 && npm run build 2>&1)",
+      "Read(//c/Users/rohan/OneDrive - Monash University/Coding/**)",
+      "Bash(curl -sf http://localhost:8000/docs)",
+      "Bash(curl -sf http://localhost:5173)",
+      "Bash(curl -s http://localhost:8000/players)",
+      "Read(//c/Users/rohan/.claude/projects/c--Users-rohan-OneDrive---Monash-University-Coding-Tennis-Prediction/tool-results/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\rohan\\.claude\\plans"
     ]
   }
 }
