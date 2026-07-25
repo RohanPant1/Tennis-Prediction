@@ -23,7 +23,7 @@ function App() {
       <TopNav view={view} setView={setView} />
 
       <div className="border-b border-slate-800 bg-amber-950/20 px-4 py-2 text-center text-xs text-amber-400">
-        Data current through Roland Garros 2026. Matches after that date aren't reflected in ratings or predictions.
+        Data from January 2017 thill Roland Garros 2026. Matches after that date aren't reflected in ratings or predictions. H2H may not be fully accurate
       </div>
 
       {view === 'predict' ? (
