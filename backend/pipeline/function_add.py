@@ -4,7 +4,7 @@ import math
 from collections import defaultdict
 from datetime import timedelta
 
-df = pd.read_csv("atp_matches_data_cleaned.csv")
+df = pd.read_csv("../artifacts/atp_matches_data_cleaned.csv")
 
 
 # %%
@@ -495,5 +495,5 @@ df["rel_return_elo_x_clay"] = df["rel_return_elo_pre"] * (df["surface"] == "Clay
 
 
 # %%
-df.to_csv('atp_matches_feature_add.csv', index=False, header=True)
+df.to_csv('../artifacts/atp_matches_feature_add.csv', index=False, header=True)
 df

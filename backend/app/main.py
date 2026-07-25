@@ -1,15 +1,18 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 import joblib
-from predict_stats import predict_matchup, get_feature_contributions, get_matchup_context
+from .predict_stats import predict_matchup, get_feature_contributions, get_matchup_context
 
 app = FastAPI()
 
-best_model = joblib.load('tennis_prediction_pipeline.joblib')
+ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "artifacts"
+
+best_model = joblib.load(ARTIFACTS_DIR / 'tennis_prediction_pipeline.joblib')
 
 # Origins are comma-separated in the ALLOWED_ORIGINS env var (set this to your
 # deployed frontend URL, e.g. https://your-app.vercel.app). Falls back to the
@@ -22,7 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-df_stats = pd.read_csv("atp_matches_feature_add.csv")
+df_stats = pd.read_csv(ARTIFACTS_DIR / "atp_matches_feature_add.csv")
 # match_date is stored as a raw YYYYMMDD number (e.g. 20250529.0), not a date string.
 # Parsing it without an explicit format makes pandas read it as nanoseconds-since-epoch
 # (landing near 1970), which silently breaks every date comparison predict_stats.py does

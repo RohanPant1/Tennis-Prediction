@@ -4,7 +4,7 @@ This project is a full-stack application designed to predict the outcome of ATP 
 
 ## Project Structure
 
-- **`backend/`**: Contains the FastAPI application, the trained machine learning model (`tennis_prediction_pipeline.joblib`), data processing scripts, and Jupyter notebooks used for data cleaning, feature engineering, and model training.
+- **`backend/`**: Contains the FastAPI application (`app/`), the data pipeline notebooks and scripts (`pipeline/`), generated data/model artifacts including `tennis_prediction_pipeline.joblib` (`artifacts/`), and the tournament-ID scraper (`scraper/`).
 - **`frontend/`**: A React application built with Vite that provides a user interface for selecting players and match conditions to get predictions.
 - **`data/`**: Stores raw and processed CSV/Excel files containing ATP match statistics and rankings.
 - **`atp_scraper/`**: Utilities for scraping latest ATP match data (if applicable).
@@ -43,7 +43,7 @@ The backend handles the prediction logic and serves the API.
 
 4.  Start the FastAPI server:
     ```bash
-    uvicorn main:app --reload
+    uvicorn app.main:app --reload
     ```
     The backend API will be available at `http://localhost:8000`.
 
@@ -83,11 +83,11 @@ The frontend provides the interactive UI for the application.
 
 ## Data Pipeline
 
-The project includes several Jupyter notebooks in the `backend/` directory that document the data science workflow:
+The project includes several Jupyter notebooks in `backend/pipeline/` that document the data science workflow:
 
 -   `data_clean.ipynb`: Cleaning raw ATP match data.
 -   `feature_add.ipynb` & `feature_engineer.ipynb`: creating features for the model.
--   `model.ipynb`: Training and evaluating the XGBoost model.
+-   `model.ipynb`: Training and evaluating the model.
 
 ## Technologies Used
 
