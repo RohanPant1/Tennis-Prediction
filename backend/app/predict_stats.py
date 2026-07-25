@@ -155,9 +155,9 @@ def get_surface_ratings(player_name, target_date, surface, df):
     the player has no history on this surface, so callers can fall back to
     overall (any-surface) ratings.
 
-    This is what feeds surface_elo (display) and, via get_player_prediction_state,
+    This is what feeds surface_elo and, via get_player_prediction_state,
     the model's actual rel_match_elo_pre/rel_serve_elo_pre/rel_return_elo_pre
-    features -- those are trained as global+surface blends, so at inference time
+    features. Those are trained as global+surface blends, so at inference time
     they need to be estimated for the surface being predicted, not just carried
     over from whatever surface the player's last real match happened to be on.
     """
@@ -377,8 +377,7 @@ def predict_matchup(p1, p2, target_date, surface, draw_size, best_of, tourney_le
     """
     Generates features for a specific matchup and uses the trained model to predict a winner.
 
-    The model's "player A vs player B" symmetry (see feature_engineer.ipynb's random
-    50%-row target-flip augmentation) is only approximate -- a boosted-tree model isn't
+    The model's "player A vs player B" symmetry is only approximate -- a boosted-tree model isn't
     architecturally guaranteed to satisfy f(swap(x)) == 1 - f(x), so predict_proba(p1, p2)
     and predict_proba(p2, p1) can disagree, most noticeably in close matchups near 50/50
     where that noise can flip the predicted winner. Averaging both directions guarantees
@@ -394,7 +393,7 @@ def predict_matchup(p1, p2, target_date, surface, draw_size, best_of, tourney_le
     if X_forward is None or X_reversed is None:
         return None
 
-    # Convert booleans to ints (as done in step 2 of your model.ipynb)
+    # Convert booleans to ints (as done in step 2 of model.ipynb)
     bool_cols = X_forward.select_dtypes(include=['bool']).columns
     X_forward[bool_cols] = X_forward[bool_cols].astype(int)
     X_reversed[bool_cols] = X_reversed[bool_cols].astype(int)
