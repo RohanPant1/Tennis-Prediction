@@ -6,6 +6,7 @@ __pycache__/
 venv/
 .venv/
 env/
+atp_scraper/
 
 # Node
 node_modules/
@@ -26,3 +27,6 @@ catboost_info/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Claude Code local config
+.claude/
