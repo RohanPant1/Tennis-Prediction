@@ -64,7 +64,8 @@
       "Skill(artifact-design)",
       "Skill(artifact-design:*)",
       "Bash(git check-ignore *)",
-      "Bash(git ls-files *)"
+      "Bash(git ls-files *)",
+      "Bash(python3)"
     ],
     "additionalDirectories": [
       "C:\\Users\\rohan\\.claude\\plans"
