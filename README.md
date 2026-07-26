@@ -1,96 +1,57 @@
-# Tennis Prediction App
+# 🎾 ATP Tennis Match Predictor
 
-This project is a full-stack application designed to predict the outcome of ATP tennis matches using machine learning. It leverages historical match data to train an XGBoost model, which is then served via a FastAPI backend to a React frontend.
+A full-stack app that predicts the outcome of ATP tennis matches using a machine learning model trained on historical match data.
 
-## Project Structure
+**Live app:** https://rohanpant1.github.io/Tennis-Prediction/
 
-- **`backend/`**: Contains the FastAPI application (`app/`), the data pipeline notebooks and scripts (`pipeline/`), generated data/model artifacts including `tennis_prediction_pipeline.joblib` (`artifacts/`), and the tournament-ID scraper (`scraper/`).
-- **`frontend/`**: A React application built with Vite that provides a user interface for selecting players and match conditions to get predictions.
-- **`data/`**: Stores raw and processed CSV/Excel files containing ATP match statistics and rankings.
-- **`atp_scraper/`**: Utilities for scraping latest ATP match data (if applicable).
 
-## Prerequisites
+---
 
-- **Python 3.8+**
-- **Node.js 16+** & **npm**
+## What it does
 
-## Installation & Setup
+Give it two player names and match context (surface, tournament level, round, best-of), and it returns a predicted winner with win probabilities for each player — based on pre-match Elo ratings, rolling serve/return stats, and head-to-head history, fed into a trained XGBoost classifier.
 
-### 1. Backend Setup
+## How it works
 
-The backend handles the prediction logic and serves the API.
+```
+React frontend  →  FastAPI backend  →  XGBoost pipeline (joblib)
+(GitHub Pages)     (Azure App Service)   trained on ATP match history
+```
 
-1.  Navigate to the `backend` directory:
-    ```bash
-    cd backend
-    ```
+1. The frontend collects the matchup details and posts them to the backend's `/predict` endpoint.
+2. The backend walks each player's match history to compute their *pre-match* Elo ratings and rolling stats as of the target date — the same feature logic used during training, reimplemented for a live single matchup.
+3. Those features go through the trained scikit-learn `Pipeline` (XGBoost classifier) to produce a win probability, plus a breakdown of which features drove the prediction.
 
-2.  (Optional but recommended) Create and activate a virtual environment:
-    ```bash
-    # Windows
-    python -m venv venv
-    venv\Scripts\activate
+## Tech stack
 
-    # macOS/Linux
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
+**Frontend** — React 19, Vite, Tailwind CSS, Axios
+**Backend** — FastAPI, Uvicorn, Pandas, NumPy, scikit-learn, XGBoost (+ CatBoost/LightGBM used during model experimentation)
+**ML / data pipeline** — Jupyter notebooks, chronological Elo-rating system, `RandomizedSearchCV` with `TimeSeriesSplit` cross-validation
+**Deployment** — Azure App Service (backend), GitHub Pages (frontend), GitHub Actions (CI/CD for the frontend build)
 
-3.  Install the required Python packages:
-    ```bash
-    pip install -r requirements.txt
-    ```
+## How the model was built
 
-4.  Start the FastAPI server:
-    ```bash
-    uvicorn app.main:app --reload
-    ```
-    The backend API will be available at `http://localhost:8000`.
+The pipeline runs as a sequence of notebooks in `backend/pipeline/`, each reading the previous stage's output:
 
-### 2. Frontend Setup
+1. **`data_clean.ipynb`** — merges main-tour and qualifying/challenger match data, coerces types, fills missing values, normalizes surfaces.
+2. **`feature_add.ipynb`** — computes, match-by-match in chronological order: Elo ratings (overall + serve/return, global and surface-blended, with time-decay), rolling 52-week serve/return stats shrunk toward tour-average priors, and head-to-head/career-count features — all calculated *before* each match to avoid leakage.
+3. **`feature_engineer.ipynb`** — selects and encodes final features, and builds a symmetric training target (randomly flips winner/loser framing for half the rows) so the model learns "player A vs player B," not just "predict the winner."
+4. **`model.ipynb`** — trains an XGBoost classifier inside a `Pipeline`, tuned via `RandomizedSearchCV` over `TimeSeriesSplit`, scored on ROC-AUC. The fitted pipeline is saved as `tennis_prediction_pipeline.joblib`.
 
-The frontend provides the interactive UI for the application.
+## Deployment
 
-1.  Open a new terminal and navigate to the `frontend` directory:
-    ```bash
-    cd frontend
-    ```
+- **Backend** runs on Azure App Service (Linux, Python 3.12, F1 free tier), deployed via `az webapp up` from `backend/`. CORS-allowed origins are set via the `ALLOWED_ORIGINS` app setting.
+- **Frontend** is built and deployed automatically to GitHub Pages by a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) on every push to `main`. The backend URL is injected at build time via the `VITE_API_URL` repository variable.
 
-2.  Install the dependencies:
-    ```bash
-    npm install
-    ```
+## Project structure
 
-3.  Start the development server:
-    ```bash
-    npm run dev
-    ```
-    The application should now be running at `http://localhost:5173` (or the port specified in your terminal).
-
-## Usage
-
-1.  Ensure both the backend and frontend servers are running.
-2.  Open your browser and go to `http://localhost:5173`.
-3.  Enter the names of the two players (Player 1 and Player 2).
-4.  Select the match conditions:
-    -   **Target Date**: Date of the match.
-    -   **Surface**: Hard, Clay, Grass, etc.
-    -   **Draw Size**: Size of the tournament draw.
-    -   **Best Of**: 3 or 5 sets.
-    -   **Tournament Level**: Grand Slam, Masters, etc.
-    -   **Round Index**: The round of the tournament.
-5.  Click **Predict** to see the predicted winner and the probability of winning.
-
-## Data Pipeline
-
-The project includes several Jupyter notebooks in `backend/pipeline/` that document the data science workflow:
-
--   `data_clean.ipynb`: Cleaning raw ATP match data.
--   `feature_add.ipynb` & `feature_engineer.ipynb`: creating features for the model.
--   `model.ipynb`: Training and evaluating the model.
-
-## Technologies Used
-
--   **Frontend:** React, Vite, Axios
--   **Backend:** Python, FastAPI, Pandas, XGBoost, Scikit-learn (Joblib)
--   **Data:** Historical ATP Match Data
+```
+backend/
+  app/            FastAPI serving code (main.py, predict_stats.py)
+  pipeline/       Data pipeline notebooks + function_add.py
+  artifacts/      Generated CSVs + trained joblib model
+  scraper/        Standalone ATP tournament-ID scraper (unrelated to prediction)
+frontend/
+  src/            React components, API client
+data/             Raw yearly ATP match CSVs (feeds backend/artifacts/)
+```
