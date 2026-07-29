@@ -45,6 +45,10 @@ class MatchRequest(BaseModel):
     tourney_level: str
     round_idx: int
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 @app.get("/players")
 async def get_players():
     return {"players": player_names}

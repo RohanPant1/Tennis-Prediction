@@ -42,6 +42,7 @@ The pipeline runs as a sequence of notebooks in `backend/pipeline/`, each readin
 
 - **Backend** runs on Azure App Service (Linux, Python 3.12, F1 free tier), deployed via `az webapp up` from `backend/`. CORS-allowed origins are set via the `ALLOWED_ORIGINS` app setting.
 - **Frontend** is built and deployed automatically to GitHub Pages by a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) on every push to `main`. The backend URL is injected at build time via the `VITE_API_URL` repository variable.
+- **Keep-alive**: the F1 tier doesn't support Always On, so `.github/workflows/keep-alive.yml` pings `GET /health` every 10 minutes to stop the app from idling out and cold-starting. Only fires on the default branch and stops firing automatically if the repo goes 60+ days without a commit (a GitHub Actions limitation, not something this workflow controls).
 
 ## Project structure
 
