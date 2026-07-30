@@ -9,7 +9,7 @@ A full-stack app that predicts the outcome of ATP tennis matches using a machine
 
 ## What it does
 
-Give it two player names and match context (surface, tournament level, round, best-of), and it returns a predicted winner with win probabilities for each player — based on pre-match Elo ratings, rolling serve/return stats, and head-to-head history, fed into a trained XGBoost classifier.
+Give it two player names and match context (surface, tournament level, round, best-of), and it returns a predicted winner with win probabilities for each player, based on pre-match Elo ratings, rolling serve/return stats, and head-to-head history, fed into a trained XGBoost classifier.
 
 ## How it works
 
@@ -34,15 +34,22 @@ React frontend  →  FastAPI backend  →  XGBoost pipeline (joblib)
 The pipeline runs as a sequence of notebooks in `backend/pipeline/`, each reading the previous stage's output:
 
 1. **`data_clean.ipynb`** — merges main-tour and qualifying/challenger match data, coerces types, fills missing values, normalizes surfaces.
-2. **`feature_add.ipynb`** — computes, match-by-match in chronological order: Elo ratings (overall + serve/return, global and surface-blended, with time-decay), rolling 52-week serve/return stats shrunk toward tour-average priors, and head-to-head/career-count features — all calculated *before* each match to avoid leakage.
+2. **`feature_add.ipynb`** — computes, match-by-match in chronological order: Elo ratings (overall + serve/return, global and surface-blended, with time-decay), rolling 52-week serve/return stats shrunk toward tour-average priors, and head-to-head/career-count features. They're all calculated before each match to avoid leakage.
 3. **`feature_engineer.ipynb`** — selects and encodes final features, and builds a symmetric training target (randomly flips winner/loser framing for half the rows) so the model learns "player A vs player B," not just "predict the winner."
 4. **`model.ipynb`** — trains an XGBoost classifier inside a `Pipeline`, tuned via `RandomizedSearchCV` over `TimeSeriesSplit`, scored on ROC-AUC. The fitted pipeline is saved as `tennis_prediction_pipeline.joblib`.
 
+## Data source
+
+Match data comes from [Jeff Sackmann / Tennis Abstract](https://www.tennisabstract.com/)'s `tennis_atp` dataset, via the [Kadantte/tennis_atp](https://github.com/Kadantte/tennis_atp) fork. The dataset is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (Attribution-NonCommercial-ShareAlike):
+
+- This project is non-commercial (personal/portfolio use, no ads or paid access).
+- The generated CSVs in `backend/artifacts/` are derivative works of this data and are shared under the same CC BY-NC-SA 4.0 terms.
+- If you reuse this data yourself, attribute Jeff Sackmann / Tennis Abstract and keep it non-commercial.
+
 ## Deployment
 
-- **Backend** runs on Azure App Service (Linux, Python 3.12, F1 free tier), deployed via `az webapp up` from `backend/`. CORS-allowed origins are set via the `ALLOWED_ORIGINS` app setting.
-- **Frontend** is built and deployed automatically to GitHub Pages by a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) on every push to `main`. The backend URL is injected at build time via the `VITE_API_URL` repository variable.
-- **Keep-alive**: the F1 tier doesn't support Always On, so `.github/workflows/keep-alive.yml` pings `GET /health` every 10 minutes to stop the app from idling out and cold-starting. Only fires on the default branch and stops firing automatically if the repo goes 60+ days without a commit (a GitHub Actions limitation, not something this workflow controls).
+- **Backend** runs on Azure App Service
+- **Frontend** is built and deployed automatically to GitHub Pages by a GitHub Actions workflow.
 
 ## Project structure
 
